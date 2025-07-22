@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multiplayer Tic Tac Toe</title>
+    <title>Multiplayer Tic Tac Toe with Rive</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -83,22 +83,31 @@
             align-items: center;
             position: relative;
             border-radius: 5px;
-            font-size: 48px;
-            font-weight: bold;
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
             user-select: none;
         }
         
-        .cell:hover {
-            background-color: #f9f9f9;
+        .cell canvas {
+            width: 80px !important;
+            height: 80px !important;
         }
         
-        .cell.x {
+        .cell .fallback {
+            font-size: 48px;
+            font-weight: bold;
+            animation: fadeInScale 0.3s ease-out;
+        }
+        
+        .cell .fallback.x {
             color: #ff6b6b;
         }
         
-        .cell.o {
+        .cell .fallback.o {
             color: #4ecdc4;
         }
         
@@ -107,6 +116,7 @@
             margin: 20px 0;
             font-weight: bold;
             color: #333;
+            height: 20px;
         }
         
         #restartBtn {
@@ -198,6 +208,7 @@
     </div>
 
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://unpkg.com/@rive-app/canvas"></script>
     
     <script>
         let peer;
@@ -339,7 +350,7 @@
             updateStatus();
         }
 
-        function handleMove(e) {
+        async function handleMove(e) {
             const index = parseInt(e.target.dataset.index);
             
             // Check if it's your turn and the game is active
@@ -349,9 +360,9 @@
 
             // Make the move
             gameState[index] = currentPlayer;
-            e.target.textContent = currentPlayer;
-            e.target.classList.add(currentPlayer.toLowerCase());
-            e.target.style.animation = 'fadeInScale 0.3s ease-out';
+            
+            // Add Rive animation or fallback
+            addAnimationToCell(e.target, currentPlayer);
 
             // Check for winner or draw
             const winner = checkWinner();
@@ -370,13 +381,41 @@
             updateStatus();
         }
 
+        function addAnimationToCell(cell, symbol) {
+            // Clear any existing content
+            cell.innerHTML = '';
+            
+            // Create canvas for Rive animation
+            const canvas = document.createElement('canvas');
+            canvas.width = 80;
+            canvas.height = 80;
+            cell.appendChild(canvas);
+
+            const fileName = symbol === 'X' ? 'cross.riv' : 'circle.riv';
+
+            try {
+                new rive.Rive({
+                    src: fileName,
+                    canvas: canvas,
+                    autoplay: true,
+                    stateMachines: "State Machine 1",
+                });
+            } catch (error) {
+                console.error('Error loading Rive animation:', error);
+                // Fallback to text if Rive fails
+                cell.removeChild(canvas);
+                const fallback = document.createElement('div');
+                fallback.classList.add('fallback', symbol.toLowerCase());
+                fallback.textContent = symbol;
+                cell.appendChild(fallback);
+            }
+        }
+
         function updateBoard() {
             const cells = document.querySelectorAll('.cell');
             cells.forEach((cell, index) => {
-                if (gameState[index] && !cell.textContent) {
-                    cell.textContent = gameState[index];
-                    cell.classList.add(gameState[index].toLowerCase());
-                    cell.style.animation = 'fadeInScale 0.3s ease-out';
+                if (gameState[index] && !cell.hasChildNodes()) {
+                    addAnimationToCell(cell, gameState[index]);
                 }
             });
         }
@@ -429,4 +468,4 @@
         });
     </script>
 </body>
-</html>
+</html
