@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe with Rive</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        #board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-gap: 5px;
+            margin: 20px auto;
+            background-color: #333;
+            padding: 5px;
+            border-radius: 10px;
+        }
+        
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            border-radius: 5px;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        /* .cell:hover {
+            background-color: #f9f9f9;
+        } */
+        
+        .cell canvas {
+            width: 80px !important;
+            height: 80px !important;
+        }
+        
+        #status {
+            font-size: 18px;
+            margin: 20px 0;
+            font-weight: bold;
+            color: #333;
+            height: 20px;
+        }
+        
+        #restartBtn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        #restartBtn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Tic Tac Toe</h1>
+        <div id="board"></div>
+        <div id="status"></div>
+        <button id="restartBtn" onclick="restartGame()">Restart Game</button>
+    </div>
+
+    <!-- <canvas id="canvas" width="500" height="500"></canvas> -->
+    <script src="https://unpkg.com/@rive-app/canvas"></script>
+    
+    <script>
+        const board = document.getElementById('board');
+        const status = document.getElementById('status');
+
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let gameState = Array(9).fill("");
+
+        const winningCombos = [
+            [0,1,2], [3,4,5], [6,7,8],
+            [0,3,6], [1,4,7], [2,5,8],
+            [0,4,8], [2,4,6]
+        ];
+
+        function createBoard() {
+            board.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                cell.addEventListener('click', handleMove);
+                board.appendChild(cell);
+            }
+            updateStatus();
+        }
+
+        async function handleMove(e) {
+            const index = e.target.dataset.index;
+            if (!gameActive || gameState[index] !== "") return;
+
+            gameState[index] = currentPlayer;
+
+            // Since we don't have access to the .riv files, let's create a simple animation fallback
+            // In a real implementation, you would use:
+            // const fileName = currentPlayer === 'X' ? 'cross.riv' : 'circle.riv';
+            
+            // For now, let's create a simple text-based display
+            // const symbol = document.createElement('div');
+            // symbol.textContent = currentPlayer;
+            // symbol.style.fontSize = '48px';
+            // symbol.style.fontWeight = 'bold';
+            // symbol.style.color = currentPlayer === 'X' ? '#ff6b6b' : '#4ecdc4';
+            // symbol.style.animation = 'fadeInScale 0.3s ease-out';
+            // e.target.appendChild(symbol);
+
+            // If you have .riv files, uncomment and use this code instead:
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 80;
+            canvas.height = 80;
+            e.target.appendChild(canvas);
+
+            const fileName = currentPlayer === 'X' ? 'cross.riv' : 'circle.riv';
+
+            try {
+                new rive.Rive({
+                    src: fileName,
+                    canvas: canvas,
+                    autoplay: true,
+                    stateMachines: "State Machine 1",
+                });
+            } catch (error) {
+                console.error('Error loading Rive animation:', error);
+                // Fallback to text if Rive fails
+                const fallback = document.createElement('div');
+                fallback.textContent = currentPlayer;
+                fallback.style.fontSize = '48px';
+                fallback.style.fontWeight = 'bold';
+                fallback.style.color = currentPlayer === 'X' ? '#ff6b6b' : '#4ecdc4';
+                e.target.appendChild(fallback);
+            }
+            
+
+            if (checkWinner()) {
+                status.textContent = `Player ${currentPlayer} wins!`;
+                gameActive = false;
+                return;
+            }
+
+            if (gameState.every(cell => cell !== "")) {
+                status.textContent = "It's a draw!";
+                gameActive = false;
+                return;
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateStatus();
+        }
+
+        function checkWinner() {
+            return winningCombos.some(combo => {
+                const [a, b, c] = combo;
+                return gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c];
+            });
+        }
+
+        function updateStatus() {
+            if (gameActive) {
+                status.textContent = `Player ${currentPlayer}'s turn`;
+            }
+        }
+
+        function restartGame() {
+            currentPlayer = 'X';
+            gameActive = true;
+            gameState = Array(9).fill("");
+            createBoard();
+        }
+
+        // Initialize the game
+        createBoard();
+    </script>
+
+    <style>
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+</body>
+</html>
